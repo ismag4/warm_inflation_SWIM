@@ -79,7 +79,7 @@ extern "C" {
             //return exp(-mx/T)*(pow(g,4.0)*(M*M)*(T*T)/( pow(mx,3.0) ) ) * (1.0 + (1.0/(sqrt(2*M_PI)))*pow((mx/T),(3.0/2.0)) );
         };
         
-        Cy = Cg;//3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
+        Cy = 3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
 
         auto Ups = [Cy,Ups_wo_Cy] (double phi,double T) -> double {
             return Cy * Ups_wo_Cy(phi,T);

@@ -64,7 +64,7 @@ extern "C" {
 
       //#################################//
 
-        Cy = Cg; //3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
+        Cy = 3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
 
         auto Ups = [Cy,Ups_wo_Cy] (double phi,double T) -> double {
             return Cy * Ups_wo_Cy(phi,T);
