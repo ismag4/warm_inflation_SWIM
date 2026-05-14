@@ -6,7 +6,7 @@ int verbose = 0; //Set from python script
 
 extern "C" {
 
-    void model (double phi_ini,double Q_ini, double gst, double V0,int p, int c, int hybrid_inf) {
+    void model (double phi_ini,double Q_ini, double gst, double V0,int p, int c, int hybrid_inf, double f0, double Cg, double t0) {
 
         double Cr = (M_PI*M_PI / 30.0) * gst;
         double php_ini=0.0;
@@ -16,27 +16,27 @@ extern "C" {
 
         //#### Model Def here ####//
 
-        auto V = [V0] (double phi) -> double {
+        auto V = [V0,f0] (double phi) -> double {
             //return V0*log(lmbd*phi)*log(lmbd*phi);
             //return 0.5*V0*phi*phi;
             //return V0*exp(-alph*(pow(phi,n)));
 	    //return (pow(M,4.0)/(4.0*lmbd)) + ((V0/2.0)*phi*phi);
             //return V0 * (1.0 - (gma*phi*phi) );
-            //return V0 * (1.0 + cos(phi/f));
+            return pow(V0,4.0) * (1.0 + cos(phi/f0));
             //return V0 * ( F - (4.0*exp(-phi/sqrt(3.0))) + exp(-4.0*phi/sqrt(3.0)) + ( R * ( exp(2.0*phi/sqrt(3.0)) - 1.0 ) ) ) ;
-            return (V0/4.0)*pow(phi,4.0);
+            //return (V0/4.0)*pow(phi,4.0);
             //return 0.5*(m*m)*(phi*phi);
         };
 
-        auto Vd = [V0] (double phi) -> double {
+        auto Vd = [V0,f0] (double phi) -> double {
             //return (2.0*V0*log(lmbd*phi))/phi;
             //return V0*phi;
             //return -((n*V0*alph*pow(phi,-1.0 + n))/exp(alph*pow(phi,n)));
 	    //return V0*phi;
             //return -2.0 * V0 * gma * phi;
-            //return (-V0/f) * sin(phi/f);
+            return (-pow(V0,4.0)/f0) * sin(phi/f0);
             //return V0 * (2.0/sqrt(3.0)) * exp(-4.0*phi/sqrt(3.0)) * (-2.0 + (2.0*exp(sqrt(3.0)*phi)) + (R*exp(2.0*sqrt(3.0)*phi)) ) ; 
-            return V0*phi*phi*phi;
+            //return V0*phi*phi*phi;
             //return m*m*phi;
         };
 
@@ -54,8 +54,8 @@ extern "C" {
         set_T_ini(Q_ini);
 
         /*  Specify your WI dissipation here if not of the form T^p \phi^c  */
-        auto Ups_wo_Cy = [p,c] (double phi,double T) -> double {  //Form of Upsilon without the constant
-            return pow(T,p) * pow(phi,c);
+        auto Ups_wo_Cy = [p,c,t0] (double phi,double T) -> double {  //Form of Upsilon without the constant
+            return pow(T,p) * pow(phi,c) * (t0*t0/(t0*t0 + T*T));
 
             /* EFT WI model Upsilon */
             //double mx = sqrt(((g*g)*(M*M))/2.0 + ((alph*alph)*(T*T)));
@@ -64,7 +64,7 @@ extern "C" {
 
       //#################################//
 
-        Cy = 3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
+        Cy = Cg; //3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
 
         auto Ups = [Cy,Ups_wo_Cy] (double phi,double T) -> double {
             return Cy * Ups_wo_Cy(phi,T);

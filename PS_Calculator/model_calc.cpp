@@ -18,25 +18,25 @@ int verbose = 0; //Set to one if you want to see the error messages
 
 extern "C" {
 
-    void model (double phi_ini,double gst,double Q_ini,double V0,double Np,int p,int c,int therm,int rad_noise) {
+    void model (double phi_ini,double gst,double Q_ini,double V0,double Np,int p,int c,int therm,int rad_noise, double f0, double Cg, double t0) { 
 
         double Cr =  ((M_PI*M_PI) / 30.0) * gst;
         double php_ini=0.0;
         double T_ini=0.0;
-        double Cy=0.0;
+        double Cy= 0.0; // fijamos posteriormente Cg al caso de estudio, Cg se declara en .py
 
         //#### Model Definition here ####//
 
-        auto V = [V0] (double phi) -> double {
-            return (V0/4.0)*pow(phi,4.0);
+        auto V = [V0,f0] (double phi) -> double {
+            return pow(V0,4.0) * (1.0 + cos(phi/f0));
         };
 
-        auto Vd = [V0] (double phi) -> double {
-            return V0*phi*phi*phi;
+        auto Vd = [V0,f0] (double phi) -> double {
+            return -(pow(V0,4.0)/f0) * sin(phi/f0);
         };
 
-        auto Vdd = [V0] (double phi) -> double {
-            return 3.0*V0*phi*phi;
+        auto Vdd = [V0,f0] (double phi) -> double {
+            return -(pow(V0,4.0)/(f0*f0)) * cos(phi/f0);
         };
 
         auto set_php_ini = [Vd,V,phi_ini,&php_ini] (double Q_ini) -> void {
@@ -52,23 +52,26 @@ extern "C" {
         set_T_ini(Q_ini);
 
         /*  Specify your WI dissipation here if not of the form T^p \phi^c  */
-        auto Ups_wo_Cy = [p,c] (double phi,double T) -> double {  //Form of Upsilon without the constant
-            return pow(T,p) * pow(phi,c);
+        auto Ups_wo_Cy = [p,c,t0] (double phi,double T) -> double {  //Form of Upsilon without the constant
+            return pow(T,p) * pow(phi,c) * (t0*t0/(t0*t0 + T*T));
         };
-
-        Cy = 3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
+	// no necesitamos calcularlo lo fijamos en .py
+        Cy = Cg; //3.0*sqrt(V(phi_ini)/3.0)*Q_ini/Ups_wo_Cy(phi_ini,T_ini);
         
         auto Ups = [Cy,Ups_wo_Cy] (double phi,double T) -> double {
             return Cy * Ups_wo_Cy(phi,T);
         };
         
         /*  Define the partial derivatives of Upsilon if not of the form T^p \phi^c  */
-        auto pT_Ups = [Cy,p,c] (double phi, double T) -> double {
-            return p * Cy * pow(T,p-1.0) * pow(phi,c);
+        auto pT_Ups = [Cy,p,c,t0] (double phi, double T) -> double {
+           double term1 = p * pow(T,p-1.0) * (t0*t0/(t0*t0 + T*T));
+           double term2 = -2.0 * t0*t0 * pow(T,p+1.0)/pow(t0*t0 + T*T,2.0);
+            return Cy * pow(phi,c) * (term1 + term2);
         };
 
-        auto pph_Ups = [Cy,p,c] (double phi, double T) -> double {
-            return c * Cy * pow(T,p) * pow(phi,c-1.0);
+        auto pph_Ups = [Cy,p,c,t0] (double phi, double T) -> double {
+            if (c == 0) return 0.0;
+            return c * Cy * pow(T,p) * pow(phi,c-1.0) * (t0*t0/(t0*t0 + T*T));
         };
 
         /*

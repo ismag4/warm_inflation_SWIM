@@ -4,8 +4,11 @@ from cffi import FFI
 ffi = FFI()
 
 #fixed model parameters (add more depending on the WI model):
-gst = 100.0 
-V0 = 1e-14
+gst = 106.75
+V0 = 1.21e-3
+f0 = 1.5
+Cg = 3.9e6
+t0 = 1.5e-3
 
 #Upsilon parameters
 p = int(3)
@@ -23,8 +26,8 @@ dur_N = 60.0 #Duration of inflation parameter
 Nprocs = 4  #Set to the number of CPUs you wish to use for parallelization
 
 #provide a range of values where you expect the phi_initial to be around (for the whole range of Q). For small-field models one can reduce the upper_bound. The bounds are in log10.
-lower_bound = np.log10(0.01)
-upper_bound = np.log10(30.0)
+lower_bound = np.log10(1e-6)
+upper_bound = np.log10(np.pi*f0)
 
 ranges = ((lower_bound, upper_bound),)
 
@@ -33,7 +36,7 @@ Qs = np.logspace(np.log10(Qlow),np.log10(Qup),npts)
 # def pll_comp(i):
 
 #Modify this according to the model_calc.cpp "model" function signature (copy-paste the arguments of "void model" in bg/model_calc.cpp). Nothing else needs to be modified here.
-ffi.cdef("void model (double phi_ini,double Q_ini, double gst, double V0,int p, int c, int hybrid_inf) ; void clear_Nend();extern double Nend;void set_phi_crit (double x);",override=True)
+ffi.cdef("void model (double phi_ini,double Q_ini, double gst, double V0,int p, int c, int hybrid_inf, double f0, double Cg, double t0) ; void clear_Nend();extern double Nend;void set_phi_crit (double x);",override=True)
 
 lib = ffi.dlopen("./bg/libbg.so") #opens the compiled C++ binary
 
@@ -43,7 +46,7 @@ if hybrid_inf==1:
 
 def objfn(x,Q0):
     phi0 = 10**x[0]
-    lib.model(phi0, Q0, gst, V0, p, c,hybrid_inf) #Modify to match the signature of the C++ library
+    lib.model(phi0, Q0, gst, V0, p, c,hybrid_inf, f0, Cg, t0) #Modify to match the signature of the C++ library
     Nend = lib.Nend
     lib.clear_Nend()
     return np.abs(Nend-dur_N)
